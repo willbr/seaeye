@@ -1,0 +1,40 @@
+# this is a comment
+
+for word in 'hello world'.split(' ')
+    print word
+
+
+for i in range(1, 10)
+    print 'num {i}'
+
+from raylib import *
+
+screen-width  = 800
+screen-height = 250
+
+init-window screen-width screen-height  "raylib example"
+
+player    = Rectangle(400, 280, 40, 40)
+buildings = Array(100, Rectangle())
+
+camera = Camera2D(
+	target   = Vector2(player.x + 20.0f, player.y + 20.0f),
+	offset   = Vector2(screenwidth / 2.0f, screen-height / 2.0f),
+	rotation = 0.0f,
+	zoom     = 1.0f,
+	)
+
+while !window-should-close
+	if key-pressed(KEY_R)
+		camera.zoom     = 1.0f
+		camera.rotation = 0.0f
+
+	begin-drawing
+		clear-background raywhite
+		draw-text "hello" 190 200 20 light-gray
+	end-drawing
+
+close-window
+
+return 0
+
