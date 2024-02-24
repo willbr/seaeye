@@ -1,0 +1,3 @@
+for word in list_of_words
+    print word
+
