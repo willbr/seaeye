@@ -15,7 +15,7 @@ debugging = True
 
 print('hi\n')
 
-with open('neo.ci') as f:
+with open('while.ci') as f:
 	code = f.read()
 
 print(code)
@@ -44,41 +44,16 @@ def tokenize(code):
     ]
     token_regex = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in token_specification)
 
-    # Track the previous indentation level
-    prev_indent_level = 0
-    indent_stack = [0]  # Stack to keep track of indentation levels
-
     for match in re.finditer(token_regex, code):
         kind = match.lastgroup
         value = match.group()
-        
-        if kind == "NEWLINE":
-            # Lookahead to find the next non-whitespace token's indentation
-            next_non_ws = re.match(r'[ \t]*', code[match.end():])
-            indent_level = len(next_non_ws.group(0))
-
-            if indent_level > indent_stack[-1]:
-                indent_stack.append(indent_level)
-                yield Token("INDENT")
-            while indent_level < indent_stack[-1]:
-                indent_stack.pop()
-                yield Token("DEDENT")
-                
-            yield Token(kind, value)  # Emit NEWLINE token
-        elif kind == "SKIP":
-            continue  # Ignore spaces and tabs outside of newline handling
-        else:
-            yield Token(kind, value)
-
-    # Emit DEDENT tokens if needed at EOF
-    while len(indent_stack) > 1:
-        indent_stack.pop()
-        yield Token("DEDENT")
-
-tokens = list(tokenize(code))
+        yield Token(kind, value)
 
 
-if debugging or False:
+def print_tokens(tokens):
+    print()
+    print('*'*40)
+    print()
     indent = 0
     for token in tokens:
         indent_string = '    ' * indent
@@ -89,7 +64,116 @@ if debugging or False:
             indent -= 1
         elif token.type == 'NEWLINE':
             print()
+    print('*'*40)
+    print()
 
+tokens1 = list(tokenize(code))
+#print_tokens(tokens1)
+
+
+def strip_empty_lines(input_tokens):
+    i = 0
+    previous_token_type = None
+    while i < len(input_tokens):
+        t = input_tokens[i]
+        i += 1
+        yield t
+        if t.type == 'NEWLINE':
+            while i < len(input_tokens):
+                t = input_tokens[i]
+                if t.type != 'NEWLINE':
+                    break
+                i += 1
+
+tokens2 = list(strip_empty_lines(tokens1))
+print_tokens(tokens2)
+
+def parse_indentation(input_tokens):
+    indent_stack = [0]  # Stack to keep track of indentation levels
+
+    i = 0
+    while i < len(input_tokens):
+        token = input_tokens[i]
+        i += 1
+        if token.type != 'NEWLINE':
+            yield token
+            continue
+
+        if i == len(input_tokens):
+            break
+
+        token = input_tokens[i]
+        i += 1
+
+        if token.type == 'WHITESPACE':
+            indent_level = len(token.value)
+        else:
+            indent_level = 0
+
+        if indent_level > indent_stack[-1]:
+            indent_stack.append(indent_level)
+            yield Token("INDENT")
+        while indent_level < indent_stack[-1]:
+            indent_stack.pop()
+            yield Token("DEDENT")
+
+        yield token
+
+    while len(indent_stack) > 1:
+        indent_stack.pop()
+        yield Token("DEDENT")
+
+tokens3 = list(parse_indentation(tokens2))
+#tokens2 = tokens1
+print_tokens(tokens3)
+exit()
+
+def remove_empty_lines(input_tokens):
+    i = 0
+    stack = []
+    tokens = []
+    dedents  = 0
+    newlines = 0
+    indents  = 0
+
+    while i < len(input_tokens):
+        next_token = input_tokens[i]
+        i += 1
+
+        if next_token.type in 'DEDENT':
+            dedents += 1
+            stack.append(next_token)
+        if next_token.type in 'NEWLINE':
+            newlines += 1
+            stack.append(next_token)
+        elif next_token.type == 'INDENT':
+            indents += 1
+            stack.append(next_token)
+        elif stack:
+            diff = indents - dedents
+            if diff == 0:
+                pass
+            else:
+                tokens.extend(stack)
+            tokens.append(next_token)
+            stack = []
+            dedents  = 0
+            newlines = 0
+            indents  = 0
+        else:
+            tokens.append(next_token)
+
+        # merge indents and newlines?
+        # remove duplicates
+        # skip empty lines?
+
+    return tokens
+
+#tokens2 = remove_empty_lines(tokens1)
+
+tokens = tokens2
+
+#assert False
 
 class Parser:
     def __init__(self, tokens):
@@ -107,7 +191,6 @@ class Parser:
         return ast
 
     def parse_statement(self):
-
         if self.end_of_tokens():
             assert False
             return None
@@ -130,7 +213,12 @@ class Parser:
         return expr
 
     def parse_expression(self):
-        cmd = self.consume('WORD').value
+        self.consume_whitespace()
+        if self.current_token().type not in ['WORD', 'STRING1', 'STRING2']:
+            t = self.current_token()
+            assert False
+
+        cmd = self.consume(None).value
 
         if self.current_token().type != 'LPAREN':
             return cmd
@@ -170,7 +258,7 @@ class Parser:
         _ = self.consume('INDENT')
         while self.current_token().type != 'DEDENT':
             self.consume_comments_and_newlines()
-            expr = self.parse_expression()
+            expr = self.parse_statement()
             block.append(expr)
             #print(block)
             
