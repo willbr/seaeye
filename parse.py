@@ -1,3 +1,12 @@
+from rich.traceback import install
+install(show_locals=True)
+
+from rich.console import Console
+console = Console()
+
+python_print = print
+print = console.print
+
 print('hi\n')
 
 with open('neo.ci') as f:
@@ -66,9 +75,16 @@ def tokenize(code):
 tokens = list(tokenize(code))
 
 
+indent = 0
 for token in tokens:
-   print(token)
-   pass
+    indent_string = '    ' * indent
+    print(f'{indent_string} {token}')
+    if token.type == 'INDENT':
+        indent += 1
+    elif token.type == 'DEDENT':
+        indent -= 1
+    elif token.type == 'NEWLINE':
+        print()
 
 
 class Parser:
@@ -116,8 +132,15 @@ class Parser:
             return cmd
 
         _ = self.consume('LPAREN')
-        args = []
+
+        if self.current_token().type == 'INDENT':
+            args = self.consume_paren_block()
+            block = []
+            expr = [cmd, args, block]
+            return expr
+
         arg = ['infix']
+        args = [arg]
 
         while self.current_token().type != 'RPAREN':
             t = self.consume(None)
@@ -154,17 +177,37 @@ class Parser:
 
         return block
 
+    def consume_paren_block(self):
+        block = []
+        _ = self.consume('INDENT')
+        while True:
+            self.consume_comments_and_newlines()
+            self.consume_whitespace()
+            if self.current_token().type in ['DEDENT', 'RPAREN']:
+                break
+            t = self.current_token()
+            statement = self.parse_statement()
+            print(statement)
+            block.append(statement)
+            #print(block)
+            
+        t = self.current_token()
+        _ = self.consume('RPAREN')
+        _ = self.consume('DEDENT')
+
+        return block
+
     def consume_comments_and_newlines(self):
         while not self.end_of_tokens():
             if self.current_token().type in ["COMMENT", 'NEWLINE']:
                 _ = self.consume(None)
+                #print(f'skip {_}')
             else:
                 break
 
     def consume(self, expected_type, expected_value=None, skip_whitespace=True):
         if skip_whitespace:
-            while not self.end_of_tokens() and self.current_token().type == 'WHITESPACE':
-                self.current_token_index += 1
+            self.consume_whitespace()
 
         token = self.current_token()
         #print(f'{token=}')
@@ -176,6 +219,10 @@ class Parser:
             return token
         else:
             raise Exception(f"Expected token {expected_type} but got {token.type}")
+
+    def consume_whitespace(self):
+        while not self.end_of_tokens() and self.current_token().type == 'WHITESPACE':
+            self.current_token_index += 1
 
     def end_of_tokens(self):
         return self.current_token_index >= len(self.tokens)
