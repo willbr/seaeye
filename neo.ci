@@ -1,0 +1,4 @@
+pos =
+	\ Point 400 280
+pos    = Point(400, 280)
+

@@ -1,6 +1,6 @@
 print('hi\n')
 
-with open('for.ci') as f:
+with open('neo.ci') as f:
 	code = f.read()
 
 print(code)
@@ -22,7 +22,7 @@ def tokenize(code):
         ("RPAREN", r"[)]"),
         ("DOT", r"[.]"),
         ("COMMA", r"[,]"),
-        ("WORD", r'\b[^(),\s]+\b'),
+        ("WORD", r'[^(),\s]+'),
         ("STRING1", r'"[^"]*"'),
         ("STRING2", r"'[^']*'"),
         ("COMMENT", r'#.*'),
@@ -67,7 +67,7 @@ tokens = list(tokenize(code))
 
 
 for token in tokens:
-   #print(token)
+   print(token)
    pass
 
 
@@ -77,17 +77,16 @@ class Parser:
         self.current_token_index = 0
 
     def parse(self):
-        ast = {"type": "Program", "body": []}
+        ast = []
 
         self.consume_comments_and_newlines()
         while not self.end_of_tokens():
-            ast["body"].append(self.parse_expression())
+            ast.append(self.parse_statement())
             self.consume_comments_and_newlines()
             #print(json.dumps(ast['body'], indent=4))
         return ast
 
-    def parse_expression(self):
-
+    def parse_statement(self):
 
         if self.end_of_tokens():
             assert False
@@ -99,9 +98,8 @@ class Parser:
         block = []
 
         while self.current_token().type not in ['NEWLINE', 'INDENT', 'DEDENT']:
-            t = self.consume(None)
-            args.append(t.value)
-
+            sub_expr = self.parse_expression()
+            args.append(sub_expr)
 
         #print(args)
         if self.current_token().type == 'INDENT':
@@ -109,6 +107,35 @@ class Parser:
 
         expr = [cmd, args, block]
 
+        return expr
+
+    def parse_expression(self):
+        cmd = self.consume('WORD').value
+
+        if self.current_token().type != 'LPAREN':
+            return cmd
+
+        _ = self.consume('LPAREN')
+        args = []
+        arg = ['infix']
+
+        while self.current_token().type != 'RPAREN':
+            t = self.consume(None)
+            if t.type == 'COMMA':
+                assert len(arg)
+                args.append(arg)
+                arg = ['infix']
+            else:
+                arg.append(t.value)
+
+        if arg:
+            args.append(arg)
+
+
+        _ = self.consume('RPAREN')
+
+        block = []
+        expr = [cmd, args, block]
         return expr
 
     def current_token(self):
@@ -157,3 +184,4 @@ parser = Parser(tokens)
 ast = parser.parse()
 
 print(json.dumps(ast, indent=4))
+
