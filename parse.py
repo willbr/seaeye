@@ -108,7 +108,7 @@ def strip_empty_lines(input_tokens):
                 i += 1
 
 tokens3 = list(strip_empty_lines(tokens2))
-print_tokens(tokens3, header='strip empty lines')
+#print_tokens(tokens3, header='strip empty lines')
 
 def parse_indentation(input_tokens):
     indent_stack = [0]  # Stack to keep track of indentation levels
@@ -147,8 +147,8 @@ def parse_indentation(input_tokens):
 
 tokens4 = list(parse_indentation(tokens3))
 #tokens2 = tokens1
-print_tokens(tokens4, header='indent')
-exit()
+#print_tokens(tokens4, header='indent')
+#exit()
 
 tokens = tokens4
 
@@ -299,4 +299,28 @@ parser = Parser(tokens)
 ast = parser.parse()
 
 print(json.dumps(ast, indent=4))
+
+def dumps(ast):
+    for statement in ast:
+        s = dump_statement(statement, 0)
+        print('\n'.join(s))
+
+def dump_statement(ast, indent):
+    cmd, args, block = ast
+    args_string = dump_args(args)
+
+    indent_string = '    ' * indent
+    lines = [f'{indent_string}{cmd} {args_string}']
+    for sub_statement in block:
+        sub_statement_string = dump_statement(sub_statement, indent+1)
+        lines.append('\n'.join(sub_statement_string))
+    return lines
+
+def dump_args(args):
+    return ' '.join(str(a) for a in args)
+
+print('*'*40)
+print()
+dumps(ast)
+print()
 
