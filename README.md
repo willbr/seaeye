@@ -1,19 +1,20 @@
 # seaeye
 toy programming language
 
-file extention .ci
+![logo](images/logo.png)
+
+file extention `.ci`
 
 # features
 
-namespace
-string type
-macros
-generics
-type conversions
-dynamic arrays
-bool
-
-errors?
+- namespace
+- string type
+- macros
+- generics
+- type conversions
+- dynamic arrays
+- bool
+- errors?
 
 
 
