@@ -1,4 +1,4 @@
-pos =
-	\ Point 400 280
-pos    = Point(400, 280)
-
+camera = Camera2D(
+	rotation = 0.0f
+	zoom     = 1.0f
+	)
