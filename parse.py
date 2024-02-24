@@ -125,9 +125,9 @@ def parse_indentation(input_tokens):
             break
 
         next_token = input_tokens[i]
-        i += 1
 
         if next_token.type == 'WHITESPACE':
+            i += 1
             indent_level = len(next_token.value)
         else:
             indent_level = 0
