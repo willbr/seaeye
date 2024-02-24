@@ -30,13 +30,13 @@ class Token:
 
 def tokenize(code):
     token_specification = [
+        ("STRING1", r'"[^"]*"'),
+        ("STRING2", r"'[^']*'"),
         ("LPAREN", r"[(]"),
         ("RPAREN", r"[)]"),
         ("DOT", r"[.]"),
         ("COMMA", r"[,]"),
         ("WORD", r'[^(),\s]+'),
-        ("STRING1", r'"[^"]*"'),
-        ("STRING2", r"'[^']*'"),
         ("COMMENT", r'#.*'),
         ("NEWLINE", r'\n'),
         ("WHITESPACE", r'[ \t]+'),
