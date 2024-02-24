@@ -7,15 +7,18 @@ console = Console()
 python_print = print
 print = console.print
 
+
+import re
+import json
+
+debugging = True
+
 print('hi\n')
 
 with open('neo.ci') as f:
 	code = f.read()
 
 print(code)
-
-import re
-import json
 
 class Token:
     def __init__(self, type_, value=None):
@@ -75,16 +78,17 @@ def tokenize(code):
 tokens = list(tokenize(code))
 
 
-indent = 0
-for token in tokens:
-    indent_string = '    ' * indent
-    print(f'{indent_string} {token}')
-    if token.type == 'INDENT':
-        indent += 1
-    elif token.type == 'DEDENT':
-        indent -= 1
-    elif token.type == 'NEWLINE':
-        print()
+if debugging or False:
+    indent = 0
+    for token in tokens:
+        indent_string = '    ' * indent
+        print(f'{indent_string} {token}')
+        if token.type == 'INDENT':
+            indent += 1
+        elif token.type == 'DEDENT':
+            indent -= 1
+        elif token.type == 'NEWLINE':
+            print()
 
 
 class Parser:
@@ -139,23 +143,20 @@ class Parser:
             expr = [cmd, args, block]
             return expr
 
-        arg = ['infix']
-        args = [arg]
+        args = []
 
-        while self.current_token().type != 'RPAREN':
-            t = self.consume(None)
+        while True:
+            t = self.current_token()
+            if t.type == 'RPAREN':
+                _ = self.consume('RPAREN')
+                break
+
+            arg_expr = self.parse_expression()
+            args.append(arg_expr)
+
+            t = self.current_token()
             if t.type == 'COMMA':
-                assert len(arg)
-                args.append(arg)
-                arg = ['infix']
-            else:
-                arg.append(t.value)
-
-        if arg:
-            args.append(arg)
-
-
-        _ = self.consume('RPAREN')
+                _ = self.consume('COMMA')
 
         block = []
         expr = [cmd, args, block]
@@ -187,7 +188,7 @@ class Parser:
                 break
             t = self.current_token()
             statement = self.parse_statement()
-            print(statement)
+            #print(statement)
             block.append(statement)
             #print(block)
             
