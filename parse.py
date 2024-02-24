@@ -50,20 +50,25 @@ def tokenize(code):
         yield Token(kind, value)
 
 
-def print_tokens(tokens):
+def print_tokens(tokens, header=None):
     print()
     print('*'*40)
+    if header:
+        print(f'    {header}')
+        print('*'*40)
     print()
     indent = 0
+    i = 0
     for token in tokens:
         indent_string = '    ' * indent
-        print(f'{indent_string} {token}')
+        print(f'{i} {indent_string} {token}')
         if token.type == 'INDENT':
             indent += 1
         elif token.type == 'DEDENT':
             indent -= 1
         elif token.type == 'NEWLINE':
             print()
+        i += 1
     print('*'*40)
     print()
 
@@ -71,13 +76,30 @@ tokens1 = list(tokenize(code))
 #print_tokens(tokens1)
 
 
+# TODO move this into the tokeniser with a regex?
+def strip_whitespace_from_the_end_of_lines(input_tokens):
+    i = 0
+    while i < len(input_tokens):
+        token = input_tokens[i]
+        i += 1
+
+        if token.type == 'WHITESPACE':
+            next_token = input_tokens[i]
+            if next_token.type in ['COMMENT', 'NEWLINE']:
+                continue
+        yield token
+
+tokens2 = list(strip_whitespace_from_the_end_of_lines(tokens1))
+#print_tokens(tokens2, 'striped eol whitespace')
+
 def strip_empty_lines(input_tokens):
     i = 0
-    previous_token_type = None
     while i < len(input_tokens):
         t = input_tokens[i]
         i += 1
+
         yield t
+
         if t.type == 'NEWLINE':
             while i < len(input_tokens):
                 t = input_tokens[i]
@@ -85,8 +107,8 @@ def strip_empty_lines(input_tokens):
                     break
                 i += 1
 
-tokens2 = list(strip_empty_lines(tokens1))
-print_tokens(tokens2)
+tokens3 = list(strip_empty_lines(tokens2))
+print_tokens(tokens3, header='strip empty lines')
 
 def parse_indentation(input_tokens):
     indent_stack = [0]  # Stack to keep track of indentation levels
@@ -102,11 +124,11 @@ def parse_indentation(input_tokens):
         if i == len(input_tokens):
             break
 
-        token = input_tokens[i]
+        next_token = input_tokens[i]
         i += 1
 
-        if token.type == 'WHITESPACE':
-            indent_level = len(token.value)
+        if next_token.type == 'WHITESPACE':
+            indent_level = len(next_token.value)
         else:
             indent_level = 0
 
@@ -123,55 +145,12 @@ def parse_indentation(input_tokens):
         indent_stack.pop()
         yield Token("DEDENT")
 
-tokens3 = list(parse_indentation(tokens2))
+tokens4 = list(parse_indentation(tokens3))
 #tokens2 = tokens1
-print_tokens(tokens3)
+print_tokens(tokens4, header='indent')
 exit()
 
-def remove_empty_lines(input_tokens):
-    i = 0
-    stack = []
-    tokens = []
-    dedents  = 0
-    newlines = 0
-    indents  = 0
-
-    while i < len(input_tokens):
-        next_token = input_tokens[i]
-        i += 1
-
-        if next_token.type in 'DEDENT':
-            dedents += 1
-            stack.append(next_token)
-        if next_token.type in 'NEWLINE':
-            newlines += 1
-            stack.append(next_token)
-        elif next_token.type == 'INDENT':
-            indents += 1
-            stack.append(next_token)
-        elif stack:
-            diff = indents - dedents
-            if diff == 0:
-                pass
-            else:
-                tokens.extend(stack)
-            tokens.append(next_token)
-            stack = []
-            dedents  = 0
-            newlines = 0
-            indents  = 0
-        else:
-            tokens.append(next_token)
-
-        # merge indents and newlines?
-        # remove duplicates
-        # skip empty lines?
-
-    return tokens
-
-#tokens2 = remove_empty_lines(tokens1)
-
-tokens = tokens2
+tokens = tokens4
 
 #assert False
 
