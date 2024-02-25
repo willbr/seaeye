@@ -316,8 +316,20 @@ def dump_statement(ast, indent):
         lines.append('\n'.join(sub_statement_string))
     return lines
 
-def dump_args(args):
-    return ' '.join(str(a) for a in args)
+def dump_expr(expr):
+    if isinstance(expr, list):
+        cmd, args, block = expr
+        args_string = dump_args(args, ', ')
+        if block != []:
+            assert False
+        return f'{cmd}({args_string})'
+
+    return str(expr)
+
+def dump_args(args, sep=None):
+    if sep == None:
+        sep = ' '
+    return sep.join(dump_expr(a) for a in args)
 
 print('*'*40)
 print()
