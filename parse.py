@@ -15,7 +15,7 @@ debugging = True
 
 print('hi\n')
 
-with open('neo.ci') as f:
+with open('dot.ci') as f:
 	code = f.read()
 
 print(code)
@@ -36,7 +36,7 @@ def tokenize(code):
         ("RPAREN", r"[)]"),
         ("DOT", r"[.]"),
         ("COMMA", r"[,]"),
-        ("WORD", r'[^(),\s]+'),
+        ("WORD", r'[^(),.\s]+'),
         ("COMMENT", r'#.*'),
         ("NEWLINE", r'\n'),
         ("WHITESPACE", r'[ \t]+'),
@@ -174,7 +174,7 @@ class Parser:
             assert False
             return None
 
-        cmd = self.consume('WORD').value
+        cmd = self.parse_expression()
 
         args  = []
         block = []
@@ -198,6 +198,16 @@ class Parser:
             assert False
 
         cmd = self.consume(None).value
+
+        attributes = []
+        while self.current_token().type == 'DOT':
+            _ = self.consume('DOT')
+            attribute = self.consume('WORD').value
+            attributes.append(attribute)
+
+        if attributes:
+            cmd = ['attr', [cmd, *attributes], []]
+
 
         if self.current_token().type != 'LPAREN':
             return cmd
@@ -312,18 +322,30 @@ def dumps(ast):
 
 def dump_statement(ast, indent):
     cmd, args, block = ast
+
+    cmd_string = dump_expr(cmd)
     args_string = dump_args(args)
 
     indent_string = '    ' * indent
-    lines = [f'{indent_string}{cmd} {args_string}']
+    lines = [f'{indent_string}{cmd_string} {args_string}']
     for sub_statement in block:
         sub_statement_string = dump_statement(sub_statement, indent+1)
         lines.append('\n'.join(sub_statement_string))
     return lines
 
+def dump_attr(expr):
+    cmd, args, block = expr
+    assert cmd == 'attr'
+    assert block == []
+    s = dump_args(args, '.')
+    return s
+
 def dump_expr(expr):
     if isinstance(expr, list):
         cmd, args, block = expr
+        if cmd == 'attr':
+            return dump_attr(expr)
+
         args_string = dump_args(args, ', ')
         if block != []:
             assert False
@@ -334,6 +356,7 @@ def dump_expr(expr):
 def dump_args(args, sep=None):
     if sep == None:
         sep = ' '
+
     return sep.join(dump_expr(a) for a in args)
 
 print('*'*40)
