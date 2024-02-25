@@ -15,7 +15,7 @@ debugging = True
 
 print('hi\n')
 
-with open('while.ci') as f:
+with open('neo.ci') as f:
 	code = f.read()
 
 print(code)
@@ -179,7 +179,7 @@ class Parser:
         args  = []
         block = []
 
-        while self.current_token().type not in ['NEWLINE', 'INDENT', 'DEDENT']:
+        while self.current_token().type not in ['NEWLINE', 'INDENT', 'DEDENT', 'EOF']:
             sub_expr = self.parse_expression()
             args.append(sub_expr)
 
@@ -230,7 +230,12 @@ class Parser:
         return expr
 
     def current_token(self):
-        return self.tokens[self.current_token_index]
+        try:
+            t = self.tokens[self.current_token_index]
+        except IndexError:
+            t = Token('EOF')
+        return t
+
 
     def consume_block(self):
         block = []
