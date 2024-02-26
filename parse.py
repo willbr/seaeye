@@ -15,7 +15,7 @@ debugging = True
 
 print('hi\n')
 
-with open('dot.ci') as f:
+with open('test.ci') as f:
 	code = f.read()
 
 print(code)
@@ -346,10 +346,12 @@ def dump_expr(expr):
         if cmd == 'attr':
             return dump_attr(expr)
 
+        cmd_string = dump_expr(cmd)
         args_string = dump_args(args, ', ')
+
         if block != []:
             assert False
-        return f'{cmd}({args_string})'
+        return f'{cmd_string}({args_string})'
 
     return str(expr)
 
