@@ -15,7 +15,7 @@ debugging = True
 
 print('hi\n')
 
-with open('test.ci') as f:
+with open('infix.ci') as f:
 	code = f.read()
 
 print(code)
@@ -154,6 +154,14 @@ tokens = tokens4
 
 #assert False
 
+infix_words = [
+        '=',
+        '+', '+=',
+        '-', '-=',
+        '*', '*=',
+        '/', '/=',
+        ]
+
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
@@ -187,12 +195,34 @@ class Parser:
         if self.current_token().type == 'INDENT':
             block = self.consume_block()
 
+        if len(args):
+            first_arg = args[0]
+            if first_arg in infix_words:
+                assert block == []
+                expr = ['infix', [cmd, *args], block]
+                return expr
+
         expr = [cmd, args, block]
 
         return expr
 
+    def parse_infix_expression(self):
+        _ = self.consume('LPAREN')
+        args = []
+        while self.current_token().type != 'RPAREN':
+            sub_expr = self.parse_expression()
+            args.append(sub_expr)
+        _ = self.consume('RPAREN')
+        expr = ['infix', args, []]
+        return expr
+
     def parse_expression(self):
         self.consume_whitespace()
+
+        if self.current_token().type == 'LPAREN':
+            expr = self.parse_infix_expression()
+            return expr
+
         if self.current_token().type not in ['WORD', 'STRING1', 'STRING2']:
             t = self.current_token()
             assert False
@@ -323,8 +353,15 @@ def dumps(ast):
 def dump_statement(ast, indent):
     cmd, args, block = ast
 
-    cmd_string = dump_expr(cmd)
-    args_string = dump_args(args)
+    if cmd == 'attr':
+        assert False
+    elif cmd == 'infix':
+        cmd_string = ''
+        args_string = dump_args(args, ' ')
+        assert block == []
+    else:
+        cmd_string = dump_expr(cmd)
+        args_string = dump_args(args)
 
     indent_string = '    ' * indent
     lines = [f'{indent_string}{cmd_string} {args_string}']
@@ -345,9 +382,13 @@ def dump_expr(expr):
         cmd, args, block = expr
         if cmd == 'attr':
             return dump_attr(expr)
-
-        cmd_string = dump_expr(cmd)
-        args_string = dump_args(args, ', ')
+        elif cmd == 'infix':
+            cmd_string = ''
+            args_string = dump_args(args, ' ')
+            assert block == []
+        else:
+            cmd_string = dump_expr(cmd)
+            args_string = dump_args(args, ', ')
 
         if block != []:
             assert False
