@@ -15,7 +15,7 @@ debugging = True
 
 print('hi\n')
 
-with open('infix.ci') as f:
+with open('named-args.ci') as f:
 	code = f.read()
 
 print(code)
@@ -361,11 +361,11 @@ def dump_statement(ast, indent):
         assert False
     elif cmd == 'infix':
         cmd_string = ''
-        args_string = dump_args(args, ' ', 'infix')
+        args_string = dump_args(args, ' ', 'infix', indent)
         assert block == []
     else:
         cmd_string = dump_expr(cmd, 'statement')
-        args_string = dump_args(args, ' ', 'statement')
+        args_string = dump_args(args, ' ', 'statement', indent)
 
     indent_string = '    ' * indent
     if cmd_string:
@@ -379,14 +379,14 @@ def dump_statement(ast, indent):
         lines.append('\n'.join(sub_statement_string))
     return lines
 
-def dump_attr(expr):
+def dump_attr(expr, indent):
     cmd, args, block = expr
     assert cmd == 'attr'
     assert block == []
-    s = dump_args(args, '.', 'attr')
+    s = dump_args(args, '.', 'attr', indent)
     return s
 
-def dump_expr(expr, context):
+def dump_expr(expr, context, indent):
     if not isinstance(expr, list):
         return str(expr)
 
@@ -394,21 +394,25 @@ def dump_expr(expr, context):
     assert block == []
 
     if cmd == 'attr':
-        return dump_attr(expr)
+        return dump_attr(expr, indent)
     elif cmd == 'infix':
-        args_string = dump_args(args, ' ', 'infix')
+        args_string = dump_args(args, ' ', 'infix', indent)
         assert block == []
         if context == 'infix':
             return f'({args_string})'
         else:
             return args_string
     else:
-        cmd_string = dump_expr(cmd, context)
-        args_string = dump_args(args, ', ', context)
+        cmd_string = dump_expr(cmd, context, indent)
+        args_string = dump_args(args, ', ', 'neoteric', indent)
         return f'{cmd_string}({args_string})'
 
-def dump_args(args, sep, context):
-    return sep.join(dump_expr(a, context) for a in args)
+def dump_args(args, sep, context, indent):
+    if args[0][0] == 'infix':
+        print(args[0][1])
+        #assert False
+        #return '\nblock\n'
+    return sep.join(dump_expr(a, context, indent) for a in args)
 
 print('*'*40)
 print()
