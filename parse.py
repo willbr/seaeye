@@ -207,12 +207,14 @@ class Parser:
         return expr
 
     def parse_infix_expression(self):
-        _ = self.consume('LPAREN')
         args = []
-        while self.current_token().type != 'RPAREN':
+        while self.current_token().type not in ['RPAREN', 'COMMA']:
             sub_expr = self.parse_expression()
             args.append(sub_expr)
-        _ = self.consume('RPAREN')
+
+        if len(args) == 1:
+            return args[0]
+
         expr = ['infix', args, []]
         return expr
 
@@ -220,7 +222,9 @@ class Parser:
         self.consume_whitespace()
 
         if self.current_token().type == 'LPAREN':
+            _ = self.consume('LPAREN')
             expr = self.parse_infix_expression()
+            _ = self.consume('RPAREN')
             return expr
 
         if self.current_token().type not in ['WORD', 'STRING1', 'STRING2']:
@@ -258,7 +262,7 @@ class Parser:
                 _ = self.consume('RPAREN')
                 break
 
-            arg_expr = self.parse_expression()
+            arg_expr = self.parse_infix_expression()
             args.append(arg_expr)
 
             t = self.current_token()
@@ -357,14 +361,19 @@ def dump_statement(ast, indent):
         assert False
     elif cmd == 'infix':
         cmd_string = ''
-        args_string = dump_args(args, ' ')
+        args_string = dump_args(args, ' ', 'infix')
         assert block == []
     else:
-        cmd_string = dump_expr(cmd)
-        args_string = dump_args(args)
+        cmd_string = dump_expr(cmd, 'statement')
+        args_string = dump_args(args, ' ', 'statement')
 
     indent_string = '    ' * indent
-    lines = [f'{indent_string}{cmd_string} {args_string}']
+    if cmd_string:
+        expr_string = f'{cmd_string} {args_string}'
+    else:
+        expr_string = args_string
+
+    lines = [f'{indent_string}{expr_string}']
     for sub_statement in block:
         sub_statement_string = dump_statement(sub_statement, indent+1)
         lines.append('\n'.join(sub_statement_string))
@@ -374,33 +383,32 @@ def dump_attr(expr):
     cmd, args, block = expr
     assert cmd == 'attr'
     assert block == []
-    s = dump_args(args, '.')
+    s = dump_args(args, '.', 'attr')
     return s
 
-def dump_expr(expr):
-    if isinstance(expr, list):
-        cmd, args, block = expr
-        if cmd == 'attr':
-            return dump_attr(expr)
-        elif cmd == 'infix':
-            cmd_string = ''
-            args_string = dump_args(args, ' ')
-            assert block == []
-        else:
-            cmd_string = dump_expr(cmd)
-            args_string = dump_args(args, ', ')
+def dump_expr(expr, context):
+    if not isinstance(expr, list):
+        return str(expr)
 
-        if block != []:
-            assert False
+    cmd, args, block = expr
+    assert block == []
+
+    if cmd == 'attr':
+        return dump_attr(expr)
+    elif cmd == 'infix':
+        args_string = dump_args(args, ' ', 'infix')
+        assert block == []
+        if context == 'infix':
+            return f'({args_string})'
+        else:
+            return args_string
+    else:
+        cmd_string = dump_expr(cmd, context)
+        args_string = dump_args(args, ', ', context)
         return f'{cmd_string}({args_string})'
 
-    return str(expr)
-
-def dump_args(args, sep=None):
-    if sep == None:
-        sep = ' '
-
-    return sep.join(dump_expr(a) for a in args)
+def dump_args(args, sep, context):
+    return sep.join(dump_expr(a, context) for a in args)
 
 print('*'*40)
 print()
