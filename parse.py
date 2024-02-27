@@ -347,14 +347,21 @@ class Parser:
 parser = Parser(tokens)
 ast = parser.parse()
 
-print(json.dumps(ast, indent=4))
+#print(json.dumps(ast, indent=4))
 
 def dumps(ast):
-    for statement in ast:
-        s = dump_statement(statement, 0)
-        print('\n'.join(s))
+    lines = dump_block(ast, 'module', 0)
+    print('\n'.join(lines))
 
-def dump_statement(ast, indent):
+def dump_block(block, context, indent):
+    lines = []
+    for statement in block:
+        s = dump_statement(statement, context, indent)
+        s2 = '\n'.join(s)
+        lines.append(s2)
+    return lines
+
+def dump_statement(ast, context, indent):
     cmd, args, block = ast
 
     if cmd == 'attr':
@@ -364,7 +371,7 @@ def dump_statement(ast, indent):
         args_string = dump_args(args, ' ', 'infix', indent)
         assert block == []
     else:
-        cmd_string = dump_expr(cmd, 'statement')
+        cmd_string = dump_expr(cmd, 'statement', indent)
         args_string = dump_args(args, ' ', 'statement', indent)
 
     indent_string = '    ' * indent
@@ -375,7 +382,7 @@ def dump_statement(ast, indent):
 
     lines = [f'{indent_string}{expr_string}']
     for sub_statement in block:
-        sub_statement_string = dump_statement(sub_statement, indent+1)
+        sub_statement_string = dump_statement(sub_statement, context, indent+1)
         lines.append('\n'.join(sub_statement_string))
     return lines
 
@@ -408,10 +415,24 @@ def dump_expr(expr, context, indent):
         return f'{cmd_string}({args_string})'
 
 def dump_args(args, sep, context, indent):
-    if args[0][0] == 'infix':
-        print(args[0][1])
-        #assert False
-        #return '\nblock\n'
+    has_named_args = False
+    for arg in args:
+        if not isinstance(arg, list):
+            continue
+        cmd = arg[0]
+        if cmd != 'infix':
+            continue
+        op = arg[1][1]
+        if op == '=':
+            has_named_args = True
+            break
+        #print(arg[1][1])
+
+    if has_named_args:
+        indent_string = '    ' * (indent + 1)
+        lines =  dump_block(args, context, indent+1)
+        return '\n' + '\n'.join(lines) + f'\n{indent_string}'
+
     return sep.join(dump_expr(a, context, indent) for a in args)
 
 print('*'*40)
