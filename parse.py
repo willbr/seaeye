@@ -15,7 +15,7 @@ debugging = True
 
 print('hi\n')
 
-with open('named-args.ci') as f:
+with open('comments.ci') as f:
 	code = f.read()
 
 print(code)
@@ -30,14 +30,14 @@ class Token:
 
 def tokenize(code):
     token_specification = [
+        ("COMMENT", r'#.*'),
         ("STRING1", r'"[^"]*"'),
         ("STRING2", r"'[^']*'"),
         ("LPAREN", r"[(]"),
         ("RPAREN", r"[)]"),
         ("DOT", r"[.]"),
         ("COMMA", r"[,]"),
-        ("WORD", r'[^(),.\s]+'),
-        ("COMMENT", r'#.*'),
+        ("WORD", r'[^#(),.\s]+'),
         ("NEWLINE", r'\n'),
         ("WHITESPACE", r'[ \t]+'),
         ("ERROR", r'.*\S+'),
@@ -73,7 +73,7 @@ def print_tokens(tokens, header=None):
     print()
 
 tokens1 = list(tokenize(code))
-#print_tokens(tokens1)
+print_tokens(tokens1)
 
 
 # TODO move this into the tokeniser with a regex?
@@ -221,14 +221,20 @@ class Parser:
     def parse_expression(self):
         self.consume_whitespace()
 
-        if self.current_token().type == 'LPAREN':
+        t = self.current_token()
+
+        if t.type == 'LPAREN':
             _ = self.consume('LPAREN')
             expr = self.parse_infix_expression()
             _ = self.consume('RPAREN')
             return expr
 
-        if self.current_token().type not in ['WORD', 'STRING1', 'STRING2']:
-            t = self.current_token()
+
+        if t.type == 'COMMENT':
+            expr = ['comment', t.value, []]
+            return expr
+
+        if t.type not in ['WORD', 'STRING1', 'STRING2']:
             assert False
 
         cmd = self.consume(None).value

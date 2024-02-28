@@ -1,0 +1,7 @@
+
+camera = Camera2D(
+	target   = Vector2(player.x + 20.0f, player.y + 20.0f)
+	offset   = Vector2(screenwidth / 2.0f, screen-height / 2.0f)
+	rotation = 0.0f
+	zoom     = 1.0f
+	)
