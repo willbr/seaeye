@@ -1,9 +1,6 @@
-#hello world
-puts "hi" # end of line comment
-
-1 + 1#hahaha
-
-double( 1 #1
-	2 # 2
-	3 # 2
-	) # 2
+puts "hello" # eol
+double( # open
+	4 # 8
+	5 # 7
+	)  # 6
+#eof

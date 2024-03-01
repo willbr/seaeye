@@ -6,6 +6,7 @@ console = Console()
 
 python_print = print
 print = console.print
+from pprint import pprint
 
 
 import re
@@ -73,7 +74,7 @@ def print_tokens(tokens, header=None):
     print()
 
 tokens1 = list(tokenize(code))
-print_tokens(tokens1)
+#print_tokens(tokens1)
 
 
 # TODO move this into the tokeniser with a regex?
@@ -147,7 +148,7 @@ def parse_indentation(input_tokens):
 
 tokens4 = list(parse_indentation(tokens3))
 #tokens2 = tokens1
-#print_tokens(tokens4, header='indent')
+print_tokens(tokens4, header='indent')
 #exit()
 
 tokens = tokens4
@@ -160,6 +161,7 @@ infix_words = [
         '-', '-=',
         '*', '*=',
         '/', '/=',
+        'and', 'or',
         ]
 
 class Parser:
@@ -170,10 +172,10 @@ class Parser:
     def parse(self):
         ast = []
 
-        self.consume_comments_and_newlines()
+        self.consume_newlines()
         while not self.end_of_tokens():
             ast.append(self.parse_statement())
-            self.consume_comments_and_newlines()
+            self.consume_newlines()
             #print(json.dumps(ast['body'], indent=4))
         return ast
 
@@ -186,10 +188,17 @@ class Parser:
 
         args  = []
         block = []
+        comment = None
 
         while self.current_token().type not in ['NEWLINE', 'INDENT', 'DEDENT', 'EOF']:
-            sub_expr = self.parse_expression()
-            args.append(sub_expr)
+            self.consume_whitespace()
+            comment = self.parse_comment()
+            if comment:
+                ct = self.current_token()
+                if ct.type in ['NEWLINE', 'EOF']:
+                    break
+            arg = self.parse_expression()
+            args.append(arg)
 
         #print(args)
         if self.current_token().type == 'INDENT':
@@ -199,23 +208,28 @@ class Parser:
             first_arg = args[0]
             if first_arg in infix_words:
                 assert block == []
-                expr = ['infix', [cmd, *args], block]
+                expr = ['infix', [cmd, *args], block, comment]
                 return expr
 
-        expr = [cmd, args, block]
+        expr = [cmd, args, block, comment]
 
         return expr
 
     def parse_infix_expression(self):
         args = []
-        while self.current_token().type not in ['RPAREN', 'COMMA']:
+        while self.current_token().type not in ['RPAREN', 'COMMA', 'COMMENT', 'INDENT']:
             sub_expr = self.parse_expression()
             args.append(sub_expr)
+
+        if self.current_token().type == 'INDENT':
+            assert False
 
         if len(args) == 1:
             return args[0]
 
-        expr = ['infix', args, []]
+        comment = self.parse_comment()
+
+        expr = ['infix', args, [], comment]
         return expr
 
     def parse_expression(self):
@@ -231,13 +245,26 @@ class Parser:
 
 
         if t.type == 'COMMENT':
-            expr = ['comment', t.value, []]
+            comment_text = self.consume('COMMENT').value
+            expr = ['comment', [comment_text], [], None]
             return expr
 
         if t.type not in ['WORD', 'STRING1', 'STRING2']:
             assert False
 
         cmd = self.consume(None).value
+
+        try:
+            i = int(cmd)
+            return i
+        except ValueError:
+            pass
+
+        try:
+            f = float(cmd)
+            return f
+        except ValueError:
+            pass
 
         attributes = []
         while self.current_token().type == 'DOT':
@@ -246,18 +273,31 @@ class Parser:
             attributes.append(attribute)
 
         if attributes:
-            cmd = ['attr', [cmd, *attributes], []]
+            cmd = ['attr', [cmd, *attributes], [], None]
 
 
-        if self.current_token().type != 'LPAREN':
-            return cmd
+        if self.current_token().type == 'LPAREN':
+            return self.parse_neoteric(cmd)
 
+
+        return cmd
+
+    def parse_neoteric(self, cmd):
         _ = self.consume('LPAREN')
 
+        pre_indent_comment = self.parse_comment()
+
         if self.current_token().type == 'INDENT':
+            _ = self.consume('INDENT')
             args = self.consume_paren_block()
+
+            neo_comment = self.parse_comment()
+
+            _ = self.consume('DEDENT')
             block = []
-            expr = [cmd, args, block]
+            if pre_indent_comment:
+                args.insert(0, pre_indent_comment)
+            expr = [cmd, args, block, neo_comment]
             return expr
 
         args = []
@@ -276,7 +316,16 @@ class Parser:
                 _ = self.consume('COMMA')
 
         block = []
-        expr = [cmd, args, block]
+        comment = None
+        expr = [cmd, args, block, comment]
+        return expr
+
+    def parse_comment(self):
+        t = self.optional_consume('COMMENT')
+        if t is None:
+            return
+        comment_text = t.value.lstrip('# ')
+        expr = ['comment', [comment_text], [], None]
         return expr
 
     def current_token(self):
@@ -291,7 +340,7 @@ class Parser:
         block = []
         _ = self.consume('INDENT')
         while self.current_token().type != 'DEDENT':
-            self.consume_comments_and_newlines()
+            self.consume_newlines()
             expr = self.parse_statement()
             block.append(expr)
             #print(block)
@@ -302,9 +351,8 @@ class Parser:
 
     def consume_paren_block(self):
         block = []
-        _ = self.consume('INDENT')
         while True:
-            self.consume_comments_and_newlines()
+            self.consume_newlines()
             self.consume_whitespace()
             if self.current_token().type in ['DEDENT', 'RPAREN']:
                 break
@@ -316,17 +364,24 @@ class Parser:
             
         t = self.current_token()
         _ = self.consume('RPAREN')
-        _ = self.consume('DEDENT')
 
         return block
 
-    def consume_comments_and_newlines(self):
+    def consume_newlines(self):
         while not self.end_of_tokens():
-            if self.current_token().type in ["COMMENT", 'NEWLINE']:
+            if self.current_token().type == 'NEWLINE':
                 _ = self.consume(None)
                 #print(f'skip {_}')
             else:
                 break
+
+    def optional_consume(self, expected_type):
+        token = self.current_token()
+        if token.type == expected_type:
+            return self.consume(None)
+
+        return None
+        assert False
 
     def consume(self, expected_type, expected_value=None, skip_whitespace=True):
         if skip_whitespace:
@@ -353,10 +408,12 @@ class Parser:
 parser = Parser(tokens)
 ast = parser.parse()
 
-#print(json.dumps(ast, indent=4))
+#print(json.dumps(ast, indent=2))
+pprint(ast)
 
 def dumps(ast):
     lines = dump_block(ast, 'module', 0)
+    print(lines)
     print('\n'.join(lines))
 
 def dump_block(block, context, indent):
@@ -368,7 +425,9 @@ def dump_block(block, context, indent):
     return lines
 
 def dump_statement(ast, context, indent):
-    cmd, args, block = ast
+    cmd, args, block, comment = ast
+
+    comment_string = dump_comment(comment)
 
     if cmd == 'attr':
         assert False
@@ -376,70 +435,147 @@ def dump_statement(ast, context, indent):
         cmd_string = ''
         args_string = dump_args(args, ' ', 'infix', indent)
         assert block == []
+    elif cmd == 'comment':
+        assert block == []
+        assert comment is None
+        assert len(args) == 1
+        cmd_string = ''
+        args_string = '# ' + args[0].lstrip('#')
     else:
         cmd_string = dump_expr(cmd, 'statement', indent)
         args_string = dump_args(args, ' ', 'statement', indent)
 
     indent_string = '    ' * indent
     if cmd_string:
-        expr_string = f'{cmd_string} {args_string}'
+        expr_string = f'{cmd_string}{args_string}'
     else:
         expr_string = args_string
 
-    lines = [f'{indent_string}{expr_string}']
+    first_line = f'{indent_string}{expr_string}{comment_string}'
+    lines = [first_line]
     for sub_statement in block:
         sub_statement_string = dump_statement(sub_statement, context, indent+1)
         lines.append('\n'.join(sub_statement_string))
     return lines
 
 def dump_attr(expr, indent):
-    cmd, args, block = expr
+    cmd, args, block, comment = expr
     assert cmd == 'attr'
     assert block == []
+    assert comment is None
     s = dump_args(args, '.', 'attr', indent)
+    return s
+
+def dump_comment(expr):
+    if expr is None:
+        return ''
+    cmd, args, block, comment = expr
+    assert cmd == 'comment'
+    assert len(args) == 1
+    assert block == []
+    assert comment == None
+    comment_text = args[0]
+    s = f' # {comment_text}'
     return s
 
 def dump_expr(expr, context, indent):
     if not isinstance(expr, list):
         return str(expr)
 
-    cmd, args, block = expr
+    cmd, args, block, comment = expr
+
+    if isinstance(cmd , int):
+        assert args == []
+        assert block == []
+        assert comment is None
+        s = str(cmd)
+        return s
+
+    if isinstance(cmd , float):
+        assert args == []
+        assert block == []
+        assert comment is None
+        s = str(cmd)
+        assert False
+
     assert block == []
+    comment_string = dump_comment(comment)
 
     if cmd == 'attr':
+        assert comment == None
         return dump_attr(expr, indent)
     elif cmd == 'infix':
+        assert comment == None
         args_string = dump_args(args, ' ', 'infix', indent)
         assert block == []
         if context == 'infix':
             return f'({args_string})'
         else:
             return args_string
+    elif cmd == 'comment':
+        assert comment == None
+        assert len(args) == 1
+        assert block     == []
+        comment_text = '# ' + args[0].lstrip('#')
+        return comment_text + '\n'
+    elif cmd == 'expr':
+        args_string = dump_args(args, ' ', context, indent)
+        expr_string = f'{args_string}{comment_string}'
+        return expr_string
     else:
         cmd_string = dump_expr(cmd, context, indent)
         args_string = dump_args(args, ', ', 'neoteric', indent)
-        return f'{cmd_string}({args_string})'
+        return f'{cmd_string}({args_string}){comment_string}'
+
+def contains_comments(expr):
+    if not isinstance(expr, list):
+        return False
+
+    cmd, args, block, comment = expr
+
+    if cmd == 'comment':
+        return True
+
+    if comment:
+        return True
+
+    for arg in args:
+        if contains_comments(arg):
+            return True
+
+    return False
 
 def dump_args(args, sep, context, indent):
     has_named_args = False
+    has_comments   = False
+
+    if args == []:
+        return ''
+
     for arg in args:
         if not isinstance(arg, list):
             continue
-        cmd = arg[0]
+
+        if has_comments == False and contains_comments(arg):
+            has_comments = True
+
+        cmd, arg_args, block, comment = arg
+
         if cmd != 'infix':
             continue
+
         op = arg[1][1]
         if op == '=':
             has_named_args = True
             break
         #print(arg[1][1])
 
-    if has_named_args:
+    if has_named_args or has_comments:
         indent_string = '    ' * (indent + 1)
         lines =  dump_block(args, context, indent+1)
         return '\n' + '\n'.join(lines) + f'\n{indent_string}'
 
-    return sep.join(dump_expr(a, context, indent) for a in args)
+    return ' ' + sep.join(dump_expr(a, context, indent) for a in args)
 
 print('*'*40)
 print()

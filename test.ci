@@ -29,10 +29,9 @@ while !window-should-close
 		camera.zoom     = 1.0f
 		camera.rotation = 0.0f
 
-	begin-drawing
+	draw
 		clear-background raywhite
 		draw-text "hello" 190 200 20 light-gray
-	end-drawing
 
 close-window
 
