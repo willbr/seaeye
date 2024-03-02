@@ -12,11 +12,19 @@ from pprint import pprint
 import re
 import json
 
-debugging = True
-
 print('hi\n')
 
-with open('comments.ci') as f:
+'''
+while
+for
+infix
+comments
+test
+neo
+named-args
+'''
+
+with open('named-args.ci') as f:
 	code = f.read()
 
 print(code)
@@ -62,7 +70,7 @@ def print_tokens(tokens, header=None):
     i = 0
     for token in tokens:
         indent_string = '    ' * indent
-        print(f'{i} {indent_string} {token}')
+        print(f'{i:3d} {indent_string} {token}')
         if token.type == 'INDENT':
             indent += 1
         elif token.type == 'DEDENT':
@@ -148,7 +156,7 @@ def parse_indentation(input_tokens):
 
 tokens4 = list(parse_indentation(tokens3))
 #tokens2 = tokens1
-print_tokens(tokens4, header='indent')
+#print_tokens(tokens4, header='indent')
 #exit()
 
 tokens = tokens4
@@ -254,6 +262,17 @@ class Parser:
 
         cmd = self.consume(None).value
 
+
+        attributes = []
+        while self.current_token().type == 'DOT':
+            _ = self.consume('DOT')
+            attribute = self.parse_expression()
+            attributes.append(attribute)
+
+        if attributes:
+            expr = ['attr', [cmd, *attributes], [], None]
+            return expr
+
         try:
             i = int(cmd)
             return i
@@ -265,15 +284,6 @@ class Parser:
             return f
         except ValueError:
             pass
-
-        attributes = []
-        while self.current_token().type == 'DOT':
-            _ = self.consume('DOT')
-            attribute = self.consume('WORD').value
-            attributes.append(attribute)
-
-        if attributes:
-            cmd = ['attr', [cmd, *attributes], [], None]
 
 
         if self.current_token().type == 'LPAREN':
@@ -413,7 +423,6 @@ pprint(ast)
 
 def dumps(ast):
     lines = dump_block(ast, 'module', 0)
-    print(lines)
     print('\n'.join(lines))
 
 def dump_block(block, context, indent):
@@ -575,7 +584,20 @@ def dump_args(args, sep, context, indent):
         lines =  dump_block(args, context, indent+1)
         return '\n' + '\n'.join(lines) + f'\n{indent_string}'
 
-    return ' ' + sep.join(dump_expr(a, context, indent) for a in args)
+
+    if context == 'infix':
+        prefix = ''
+    elif context == 'neoteric':
+        prefix = ''
+    elif context == 'attr':
+        prefix = ''
+    elif context == 'statement':
+        prefix = ' '
+    else:
+        #print(context)
+        prefix = '^prefix^'
+
+    return prefix + sep.join(dump_expr(a, context, indent) for a in args)
 
 print('*'*40)
 print()
