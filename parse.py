@@ -12,7 +12,6 @@ from pprint import pprint
 import re
 import json
 
-print('hi\n')
 
 '''
 while
@@ -24,10 +23,6 @@ neo
 named-args
 '''
 
-with open('named-args.ci') as f:
-	code = f.read()
-
-print(code)
 
 class Token:
     def __init__(self, type_, value=None):
@@ -81,8 +76,6 @@ def print_tokens(tokens, header=None):
     print('*'*40)
     print()
 
-tokens1 = list(tokenize(code))
-#print_tokens(tokens1)
 
 
 # TODO move this into the tokeniser with a regex?
@@ -98,8 +91,6 @@ def strip_whitespace_from_the_end_of_lines(input_tokens):
                 continue
         yield token
 
-tokens2 = list(strip_whitespace_from_the_end_of_lines(tokens1))
-#print_tokens(tokens2, 'striped eol whitespace')
 
 def strip_empty_lines(input_tokens):
     i = 0
@@ -116,8 +107,6 @@ def strip_empty_lines(input_tokens):
                     break
                 i += 1
 
-tokens3 = list(strip_empty_lines(tokens2))
-#print_tokens(tokens3, header='strip empty lines')
 
 def parse_indentation(input_tokens):
     indent_stack = [0]  # Stack to keep track of indentation levels
@@ -154,14 +143,6 @@ def parse_indentation(input_tokens):
         indent_stack.pop()
         yield Token("DEDENT")
 
-tokens4 = list(parse_indentation(tokens3))
-#tokens2 = tokens1
-#print_tokens(tokens4, header='indent')
-#exit()
-
-tokens = tokens4
-
-#assert False
 
 infix_words = [
         '=',
@@ -415,11 +396,6 @@ class Parser:
     def end_of_tokens(self):
         return self.current_token_index >= len(self.tokens)
 
-parser = Parser(tokens)
-ast = parser.parse()
-
-#print(json.dumps(ast, indent=2))
-pprint(ast)
 
 def dumps(ast):
     lines = dump_block(ast, 'module', 0)
@@ -599,8 +575,51 @@ def dump_args(args, sep, context, indent):
 
     return prefix + sep.join(dump_expr(a, context, indent) for a in args)
 
-print('*'*40)
-print()
-dumps(ast)
-print()
+def parse_file(filename):
+    with open('gameboy.ci') as f:
+        code = f.read()
+
+    ast = parse_string(code)
+    return ast
+
+
+def parse_string(code):
+    print(code)
+
+    tokens1 = list(tokenize(code))
+    #print_tokens(tokens1)
+
+    tokens2 = list(strip_whitespace_from_the_end_of_lines(tokens1))
+    #print_tokens(tokens2, 'striped eol whitespace')
+
+    tokens3 = list(strip_empty_lines(tokens2))
+    #print_tokens(tokens3, header='strip empty lines')
+
+    tokens4 = list(parse_indentation(tokens3))
+    #tokens2 = tokens1
+    #print_tokens(tokens4, header='indent')
+    #exit()
+
+    tokens = tokens4
+
+    #assert False
+    parser = Parser(tokens)
+    ast = parser.parse()
+    return ast
+
+
+def main():
+    print('hi\n')
+
+
+    #print(json.dumps(ast, indent=2))
+    pprint(ast)
+
+    print('*'*40)
+    print()
+    dumps(ast)
+    print()
+
+if __name__ == '__main__':
+    main()
 

@@ -1,0 +1,24 @@
+origin $100
+
+ld b b
+
+ld hl msg
+
+ldi a *hl
+
+label start
+cp 0
+jp z end
+
+ld *0xff01 a
+
+ldi a *hl
+jp start
+
+label end
+nop
+halt
+
+label msg 
+string "hello"
+
