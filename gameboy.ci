@@ -1,4 +1,9 @@
 origin $100
+nop
+jp main
+
+origin $150
+label main
 
 ld b b
 
@@ -21,4 +26,18 @@ halt
 
 label msg 
 string "hello"
+
+
+fn memset
+	params
+		dest  hl
+		value a
+		len   bc
+
+	while bc
+		ld hl a
+		dec bc
+	ret
+
+
 
