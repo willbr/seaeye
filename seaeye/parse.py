@@ -424,11 +424,8 @@ def dump_statement(ast, context, indent):
         args_string = dump_args(args, ' ', 'infix', indent)
         assert block == []
     elif cmd == 'comment':
-        assert block == []
-        assert comment is None
-        assert len(args) == 1
         cmd_string = ''
-        args_string = '# ' + args[0].lstrip('#')
+        args_string = dump_comment(ast)
     else:
         cmd_string = dump_expr(cmd, 'statement', indent)
         args_string = dump_args(args, ' ', 'statement', indent)
@@ -462,9 +459,8 @@ def dump_comment(expr):
     assert len(args) == 1
     assert block == []
     assert comment == None
-    comment_text = args[0]
-    s = f' # {comment_text}'
-    return s
+    comment_text = args[0].strip(' ')
+    return comment_text
 
 def dump_expr(expr, context, indent):
     if not isinstance(expr, list):
@@ -501,10 +497,7 @@ def dump_expr(expr, context, indent):
         else:
             return args_string
     elif cmd == 'comment':
-        assert comment == None
-        assert len(args) == 1
-        assert block     == []
-        comment_text = '# ' + args[0].lstrip('#')
+        comment_text = dump_comment(expr)
         return comment_text + '\n'
     elif cmd == 'expr':
         args_string = dump_args(args, ' ', context, indent)
