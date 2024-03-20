@@ -19,36 +19,38 @@ def my_eval(env, expr):
     assert isinstance(expr, list)
 
     cmd, args, block, comment = expr
-    match cmd:
-        case 'print':
-            assert len(args) == 1
-            msg = my_eval(env, args[0])
-            print(msg)
-            return
+    cmd_scope = lookup_scope(env, cmd)
+    fn = cmd_scope[cmd]
+    return fn(env, expr)
 
-        case '=':
-            target, value = args
-            try:
-                scope = lookup_scope(env, target)
-            except ValueError:
-                scope = env[-1]
-            evalated_value = my_eval(env, value)
-            scope[target] = evalated_value
+def eval_print(env, expr):
+    cmd, args, block, comment = expr
+    assert len(args) == 1
+    msg = my_eval(env, args[0])
+    print(msg)
+    return
 
-        case '+=':
-            target, value = args
-            try:
-                scope = lookup_scope(env, target)
-            except ValueError:
-                scope = env[-1]
-            evalated_value = my_eval(env, value)
-            old_value = scope[target]
-            new_value = old_value + evalated_value
-            scope[target] = new_value
+def eval_assign(env, expr):
+    cmd, args, block, comment = expr
+    target, value = args
+    try:
+        scope = lookup_scope(env, target)
+    except ValueError:
+        scope = env[-1]
+    evalated_value = my_eval(env, value)
+    scope[target] = evalated_value
 
-        case _:
-            assert False
-
+def eval_increment_by(env, expr):
+    cmd, args, block, comment = expr
+    target, value = args
+    try:
+        scope = lookup_scope(env, target)
+    except ValueError:
+        scope = env[-1]
+    evalated_value = my_eval(env, value)
+    old_value = scope[target]
+    new_value = old_value + evalated_value
+    scope[target] = new_value
 
 def lookup_scope(env, target):
     for scope in env:
@@ -58,7 +60,11 @@ def lookup_scope(env, target):
 ast = parse_file(sys.argv[1])
 #dumps(ast)
 
-global_env = [{}]
+global_env = [{
+    'print': eval_print,
+    '=':     eval_assign,
+    '+=':    eval_increment_by,
+}]
 
 for statement in ast:
     my_eval(global_env, statement)
