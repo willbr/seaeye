@@ -7,10 +7,10 @@ else
 endif
 
 all:
-	$(PYTHON) -m seaeye
+	$(PYTHON) -m seaeye.parse ./tests/fib.ci
 
 wall:
-	watchexec -cr "make all"
+	watchexec --clear --restart "make all"
 
 install:
 	$(PYTHON) -m pip install -e .

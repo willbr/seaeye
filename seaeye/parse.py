@@ -43,7 +43,8 @@ def tokenize(code):
         ("COMMA", r"[,]"),
         ("WORD", r'[^#(),.\s]+'),
         ("NEWLINE", r'\n'),
-        ("WHITESPACE", r'[ \t]+'),
+        ("TAB", r'[\t]+'),
+        ("WHITESPACE", r'[ ]+'),
         ("ERROR", r'.*\S+'),
     ]
     token_regex = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in token_specification)
@@ -124,9 +125,11 @@ def parse_indentation(input_tokens):
 
         next_token = input_tokens[i]
 
-        if next_token.type == 'WHITESPACE':
+        if next_token.type == 'TAB':
             i += 1
             indent_level = len(next_token.value)
+        elif next_token.type == 'WHITESPACE':
+            raise ValueError("lines can't start with whitespace")
         else:
             indent_level = 0
 
@@ -576,7 +579,7 @@ def dump_args(args, sep, context, indent):
     return prefix + sep.join(dump_expr(a, context, indent) for a in args)
 
 def parse_file(filename):
-    with open('gameboy.ci') as f:
+    with open(filename) as f:
         code = f.read()
 
     ast = parse_string(code)
@@ -584,20 +587,19 @@ def parse_file(filename):
 
 
 def parse_string(code):
-    print(code)
+    #print(code)
 
     tokens1 = list(tokenize(code))
-    #print_tokens(tokens1)
+    print_tokens(tokens1)
 
     tokens2 = list(strip_whitespace_from_the_end_of_lines(tokens1))
     #print_tokens(tokens2, 'striped eol whitespace')
 
     tokens3 = list(strip_empty_lines(tokens2))
-    #print_tokens(tokens3, header='strip empty lines')
+    print_tokens(tokens3, header='strip empty lines')
 
     tokens4 = list(parse_indentation(tokens3))
-    #tokens2 = tokens1
-    #print_tokens(tokens4, header='indent')
+    print_tokens(tokens4, header='indent')
     #exit()
 
     tokens = tokens4
@@ -609,11 +611,13 @@ def parse_string(code):
 
 
 def main():
+    import sys
+
     print('hi\n')
 
-
+    ast = parse_file(sys.argv[1])
     #print(json.dumps(ast, indent=2))
-    pprint(ast)
+    #pprint(ast)
 
     print('*'*40)
     print()
