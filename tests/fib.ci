@@ -1,0 +1,17 @@
+def fib-a(n)
+	// if-then-else
+	if n <e 0
+		return 0
+	return n + fib(n - 1)
+
+
+def fib-b(n)
+	r = 0
+	while n > 0
+		r += n
+		n -= 1
+	return r
+
+print fib-a(5)
+print fib-b(5)
+
