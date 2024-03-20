@@ -7,7 +7,7 @@ else
 endif
 
 all:
-	$(PYTHON) -m seaeye.parse ./tests/fib.ci
+	$(PYTHON) -m seaeye.eval ./tests/math.ci
 
 wall:
 	watchexec --clear --restart "make all"

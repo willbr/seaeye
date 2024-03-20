@@ -4,4 +4,3 @@ def fib-a(n)
 		return 0
 	return n + fib(n - 1)
 
-

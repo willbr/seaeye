@@ -583,16 +583,16 @@ def parse_string(code):
     #print(code)
 
     tokens1 = list(tokenize(code))
-    print_tokens(tokens1)
+    #print_tokens(tokens1)
 
     tokens2 = list(strip_whitespace_from_the_end_of_lines(tokens1))
     #print_tokens(tokens2, 'striped eol whitespace')
 
     tokens3 = list(strip_empty_lines(tokens2))
-    print_tokens(tokens3, header='strip empty lines')
+    #print_tokens(tokens3, header='strip empty lines')
 
     tokens4 = list(parse_indentation(tokens3))
-    print_tokens(tokens4, header='indent')
+    #print_tokens(tokens4, header='indent')
     #exit()
 
     tokens = tokens4
