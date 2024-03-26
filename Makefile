@@ -7,7 +7,7 @@ else
 endif
 
 all:
-	$(PYTHON) -m seaeye.eval ./tests/math.ci
+	$(PYTHON) -m seaeye.eval ./tests/double.ci
 
 wall:
 	watchexec --clear --restart "make all"

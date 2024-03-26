@@ -1,0 +1,9 @@
+def double(n)
+	return +(n, n)
+
+= a 10
+
+= b double(a)
+
+print b
+
